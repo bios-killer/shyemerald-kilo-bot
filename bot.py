@@ -41,9 +41,6 @@ def kilo_agents():
     out = subprocess.run(["kilo", "agent", "list"], capture_output=True, text=True, timeout=60)
     return re.findall(r"^(\S+) \((primary|subagent)\)", out.stdout, re.M)
 
-class ModelList:
-    last = []
-
 HEADER = re.compile(r"^[a-zA-Z_][\w -]* · \S")
 
 def clean_output(out):
@@ -151,8 +148,8 @@ def main():
                      f"Mode: {state.get('agent') or DEFAULT_AGENT}\n\n"
                      "Commands:\n"
                      "/providers — list providers\n"
-                     "/models <provider> — list models ('free' for :free)\n"
-                     "/model <id|number> — switch model\n"
+                     "/models <provider> — list models ('free' for :free), numbers = full list\n"
+                     "/model <id|number> — switch model (number from full list)\n"
                      "/mode — list/switch mode (code, plan, ask, debug, orchestrator)\n"
                      "/current — current model & mode\n"
                      "/new — fresh session\n"
@@ -167,26 +164,26 @@ def main():
                 ms = kilo_models()
                 arg = parts[1].strip().lower() if len(parts) > 1 else ""
                 if arg == "free":
-                    sel = [x for x in ms if x.endswith(":free")]
+                    sel = [(i, x) for i, x in enumerate(ms) if x.endswith(":free")]
                 elif arg:
-                    sel = [x for x in ms if arg in x.lower()]
+                    sel = [(i, x) for i, x in enumerate(ms) if arg in x.lower()]
                 else:
-                    sel = ms
-                ModelList.last = sel
+                    sel = list(enumerate(ms))
                 if not sel:
                     send("No match. Try /models free or /providers")
                 else:
                     shown = sel[:80]
-                    send(f"{len(sel)} models:\n" + "\n".join(f"{i+1}. {x}" for i, x in enumerate(shown)))
+                    send(f"{len(sel)} models (numbers = full list):\n"
+                         + "\n".join(f"{i+1}. {x}" for i, x in shown))
             elif text.startswith("/model"):
                 parts = text.split(maxsplit=1)
                 if len(parts) < 2:
-                    send("Usage: /model <provider/model>  or /model <number from last /models>")
+                    send("Usage: /model <provider/model>  or /model <number from full list>")
                     continue
                 arg = parts[1].strip()
                 ms = kilo_models()
-                if arg.isdigit() and ModelList.last and 1 <= int(arg) <= len(ModelList.last):
-                    pick = ModelList.last[int(arg)-1]
+                if arg.isdigit() and 1 <= int(arg) <= len(ms):
+                    pick = ms[int(arg)-1]
                 elif arg in ms:
                     pick = arg
                 elif f"kilo/{arg}" in ms:
