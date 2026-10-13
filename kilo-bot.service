@@ -1,0 +1,16 @@
+[Unit]
+Description=Telegram <-> Kilo CLI bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=geil
+Group=geil
+WorkingDirectory=/home/geil/kilo-bot
+ExecStart=/usr/bin/python3 /home/geil/kilo-bot/bot.py
+Restart=always
+RestartSec=5
+Environment=HOME=/home/geil
+
+[Install]
+WantedBy=multi-user.target
